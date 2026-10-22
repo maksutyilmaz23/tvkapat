@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">TV Kapat</string>
+    <string name="acc_label">TV Kapat - Kapatma Yardımcısı</string>
+    <string name="acc_desc">Zamanlayıcı bittiğinde cihazın güç menüsünü açıp Kapat seçeneğine basar ve uyarı ekranını diğer uygulamaların üstünde gösterir.</string>
+</resources>
