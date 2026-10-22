@@ -29,6 +29,7 @@ class MainActivity : Activity() {
     private lateinit var permTv: TextView
     private lateinit var activeTv: TextView
     private lateinit var cancelBtn: Button
+    private lateinit var logTv: TextView
     private lateinit var minutesTv: TextView
     private lateinit var durationBox: LinearLayout
     private lateinit var timePicker: TimePicker
@@ -114,6 +115,10 @@ class MainActivity : Activity() {
         }
         col.addView(cancelBtn)
 
+        col.addView(text("Son kapatma denemesi kaydı:", 16f))
+        logTv = text("", 12f).apply { setTextIsSelectable(true) }
+        col.addView(logTv)
+
         setContentView(ScrollView(this).apply { addView(col) })
 
         showMinutes()
@@ -170,6 +175,7 @@ class MainActivity : Activity() {
             "Erişilebilirlik servisi: ${mark(accEnabled())}\n" +
             "Root: ${mark(rootOk)}\n" +
             "(Uyarı için izin veya erişilebilirlik; kapatma için root veya erişilebilirlik gerekir)"
+        logTv.text = Prefs.log(this).ifEmpty { "(henüz deneme yok)" }
         val end = Prefs.endAt(this)
         val now = System.currentTimeMillis()
         if (end > now) {

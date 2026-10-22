@@ -1,6 +1,9 @@
 package com.mesut.tvkapat
 
 import android.accessibilityservice.AccessibilityService
+import android.accessibilityservice.GestureDescription
+import android.graphics.Path
+import android.graphics.Rect
 import android.content.Intent
 import android.os.Build
 import android.os.Handler
@@ -20,6 +23,7 @@ class PowerAccessibilityService : AccessibilityService() {
     private var attempts = 0
     private var running = false
     private var clickedOnce = false
+    private val seen = LinkedHashSet<String>()
 
     private val primary = listOf("kapat", "power off", "shut down", "shutdown", "switch off", "turn off", "poweroff")
     private val confirm = listOf("tamam", "ok", "evet", "yes", "onayla", "confirm")
@@ -48,7 +52,10 @@ class PowerAccessibilityService : AccessibilityService() {
         running = true
         attempts = 0
         clickedOnce = false
-        performGlobalAction(GLOBAL_ACTION_POWER_DIALOG)
+        seen.clear()
+        val opened = performGlobalAction(GLOBAL_ACTION_POWER_DIALOG)
+        seen.add("Güç menüsü komutu: ${if (opened) "gönderildi" else "REDDEDİLDİ"}")
+        saveLog()
         h.postDelayed(step, 800)
     }
 
@@ -68,6 +75,9 @@ class PowerAccessibilityService : AccessibilityService() {
             }
             rootInActiveWindow?.let { roots.add(it) }
 
+            seen.add("pencere sayısı: ${roots.size}")
+            for (r in roots) collect(r, 0)
+            saveLog()
             var clicked = false
             for (r in roots) {
                 if (r.packageName?.toString() == packageName) continue
@@ -79,6 +89,17 @@ class PowerAccessibilityService : AccessibilityService() {
             }
             h.postDelayed(this, if (clicked) 1200L else 600L)
         }
+    }
+
+    private fun collect(node: AccessibilityNodeInfo?, depth: Int) {
+        if (node == null || depth > 25 || seen.size > 80) return
+        val t = node.text?.toString() ?: node.contentDescription?.toString()
+        if (!t.isNullOrBlank()) seen.add("${node.packageName}: $t [${if (node.isClickable) "tık" else "-"}]")
+        for (i in 0 until node.childCount) collect(node.getChild(i), depth + 1)
+    }
+
+    private fun saveLog() {
+        Prefs.setLog(this, "Deneme $attempts\n" + seen.joinToString("\n"))
     }
 
     private fun variants(s: CharSequence?): List<String> {
@@ -105,6 +126,18 @@ class PowerAccessibilityService : AccessibilityService() {
                 if (n.isClickable && n.performAction(AccessibilityNodeInfo.ACTION_CLICK)) return true
                 n = n.parent
                 depth++
+            }
+            if (Build.VERSION.SDK_INT >= 24) {
+                val r = Rect()
+                node.getBoundsInScreen(r)
+                if (!r.isEmpty) {
+                    val path = Path().apply { moveTo(r.exactCenterX(), r.exactCenterY()) }
+                    val g = GestureDescription.Builder()
+                        .addStroke(GestureDescription.StrokeDescription(path, 0, 80)).build()
+                    dispatchGesture(g, null, null)
+                    seen.add("dokunuş: ${node.text ?: node.contentDescription}")
+                    return true
+                }
             }
         }
         for (i in 0 until node.childCount) {
