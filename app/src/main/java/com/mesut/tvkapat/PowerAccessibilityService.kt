@@ -108,11 +108,16 @@ class PowerAccessibilityService : AccessibilityService() {
         return listOf(t.lowercase(Locale.ROOT), t.lowercase(Locale("tr")))
     }
 
+    private val exactPrimary = listOf("kapat", "power off", "poweroff", "shut down", "shutdown", "switch off", "turn off")
+    private val selfWords = listOf("tv kapat", "yardımcı", "yardimci", "erişilebilirlik", "erisilebilirlik", "accessibility")
+
     private fun matches(node: AccessibilityNodeInfo): Boolean {
         val vs = variants(node.text) + variants(node.contentDescription)
         if (vs.isEmpty()) return false
+        if (vs.any { v -> selfWords.any { v.contains(it) } }) return false
         if (vs.any { v -> exclude.any { v.contains(it) } }) return false
-        if (vs.any { v -> primary.any { v.contains(it) } }) return true
+        if (vs.any { v -> exactPrimary.contains(v.trim()) }) return true
+        if (vs.any { v -> v.contains("power off") || v.contains("shut down") || v.contains("güç kapat") }) return true
         if (clickedOnce && vs.any { v -> confirm.any { v == it } }) return true
         return false
     }
